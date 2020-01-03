@@ -60,6 +60,7 @@ import java.util.Random;
  */
 public class MOSuiteStrategy extends TestGenerationStrategy {
 
+	@SuppressWarnings("unchecked")
 	@Override	
 	public TestSuiteChromosome generateTests() {
 		// Currently only LIPS uses its own Archive
@@ -130,7 +131,7 @@ public class MOSuiteStrategy extends TestGenerationStrategy {
 			
 			BufferedWriter writer = null;
 			try {
-				writer = new BufferedWriter(new FileWriter("D:\\ziheng\\SF100-clean-windows\\" + Properties.TARGET_METHOD + + new Random().nextInt() + ".txt"));
+				writer = new BufferedWriter(new FileWriter("D:\\ziheng\\SF100-clean-windows\\" + Properties.TARGET_METHOD + new Random().nextInt() + ".txt"));
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
