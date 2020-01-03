@@ -125,7 +125,7 @@ public class MOSuiteStrategy extends TestGenerationStrategy {
 
 			algorithm.generateSolution();
 			
-			List<TestChromosome> populationList = algorithm.getPopulationList();
+			List<TestChromosome> populationList = (List<TestChromosome>) (((DynaMOSA) algorithm).getPopulationList());
 			int expProb = getExceptionTimes(populationList);
 			
 			BufferedWriter writer = null;

@@ -1284,5 +1284,5 @@ public abstract class GeneticAlgorithm<T extends Chromosome> implements SearchAl
 		return distributionMap;
 	}
 
-	public abstract List<TestChromosome> getPopulationList();
+//	public abstract List<TestChromosome> getPopulationList();
 }
