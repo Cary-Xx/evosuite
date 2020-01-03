@@ -20,6 +20,7 @@
 package org.evosuite.ga.metaheuristics.mosa;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -35,7 +36,9 @@ import org.evosuite.ga.metaheuristics.mosa.structural.MultiCriteriaManager;
 import org.evosuite.ga.metaheuristics.mosa.structural.StructuralGoalManager;
 import org.evosuite.ga.operators.ranking.CrowdingDistance;
 import org.evosuite.testcase.MutationPositionDiscriminator;
+import org.evosuite.testcase.TestCase;
 import org.evosuite.testcase.TestChromosome;
+import org.evosuite.testcase.factories.TestGenerationUtil;
 import org.evosuite.utils.LoggingUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +60,8 @@ public class DynaMOSA<T extends Chromosome> extends AbstractMOSA<T> {
 	protected StructuralGoalManager<T> goalsManager = null;
 
 	protected CrowdingDistance<T> distance = new CrowdingDistance<T>();
+	
+	private List<T> populationList = new ArrayList<>();
 
 	/**
 	 * Constructor based on the abstract class {@link AbstractMOSA}.
@@ -175,6 +180,8 @@ public class DynaMOSA<T extends Chromosome> extends AbstractMOSA<T> {
 	public void generateSolution() {
 		logger.debug("executing generateSolution function");
 
+		this.populationList = new ArrayList<>();
+		
 		this.goalsManager = new MultiCriteriaManager<>(this.fitnessFunctions);
 		MutationPositionDiscriminator.discriminator.currentGoals = this.goalsManager.getCurrentGoals();
 
@@ -203,6 +210,7 @@ public class DynaMOSA<T extends Chromosome> extends AbstractMOSA<T> {
 		while (!isFinished() && this.goalsManager.getUncoveredGoals().size() > 0) {
 			MutationPositionDiscriminator.discriminator.setPurpose(this.goalsManager.getCurrentGoals());
 			this.evolve();
+			populationList.addAll(this.population);
 			this.notifyIteration();
 		}
 
@@ -228,5 +236,9 @@ public class DynaMOSA<T extends Chromosome> extends AbstractMOSA<T> {
 //			MutationPositionDiscriminator.discriminator.decreaseFrozenIteration();
 		}
 
+	}
+	
+	public List<TestChromosome> getPopulationList() {
+		return (List<TestChromosome>) populationList;
 	}
 }

@@ -511,7 +511,11 @@ public class TestChromosome extends ExecutableChromosome {
 			targetMethodPosition = TestGenerationUtil.getTargetMethodPosition(this.test, this.test.size()-1);
 		}
 
-
+		if (targetMethodPosition != -1) {
+			removeUnusefulStats(targetMethodPosition);
+			assert targetMethodPosition == this.test.size() - 1;
+		}
+		
 		if (Randomness.nextDouble() < Properties.CONCOLIC_MUTATION) {
 			try {
 				changed = mutationConcolic();
@@ -1116,6 +1120,12 @@ public class TestChromosome extends ExecutableChromosome {
 
 	public void setChangedPositionsInOldTest(List<Integer> changedPositionsInOldTest) {
 		this.changedPositionsInOldTest = changedPositionsInOldTest;
+	}
+	
+	public void removeUnusefulStats(int targetPosition) {		
+		while (targetPosition < this.test.size() - 1) {
+			this.test.remove(this.test.size() - 1);
+		}
 	}
 
 }

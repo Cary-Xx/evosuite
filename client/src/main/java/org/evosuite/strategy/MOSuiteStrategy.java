@@ -23,25 +23,34 @@ import org.evosuite.ClientProcess;
 import org.evosuite.Properties;
 import org.evosuite.Properties.Criterion;
 import org.evosuite.coverage.TestFitnessFactory;
+import org.evosuite.ga.Chromosome;
 import org.evosuite.ga.ChromosomeFactory;
 import org.evosuite.ga.FitnessFunction;
 import org.evosuite.ga.archive.Archive;
 import org.evosuite.ga.metaheuristics.GeneticAlgorithm;
+import org.evosuite.ga.metaheuristics.mosa.DynaMOSA;
 import org.evosuite.ga.stoppingconditions.MaxStatementsStoppingCondition;
 import org.evosuite.result.TestGenerationResultBuilder;
 import org.evosuite.rmi.ClientServices;
 import org.evosuite.rmi.service.ClientState;
 import org.evosuite.statistics.RuntimeVariable;
+import org.evosuite.testcase.TestCase;
+import org.evosuite.testcase.TestChromosome;
 import org.evosuite.testcase.TestFitnessFunction;
 import org.evosuite.testcase.execution.ExecutionTracer;
 import org.evosuite.testcase.factories.RandomLengthTestFactory;
+import org.evosuite.testcase.factories.TestGenerationUtil;
 import org.evosuite.testsuite.TestSuiteChromosome;
 import org.evosuite.utils.ArrayUtil;
 import org.evosuite.utils.LoggingUtils;
 import org.evosuite.utils.Randomness;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Test generation with MOSA
@@ -115,7 +124,31 @@ public class MOSuiteStrategy extends TestGenerationStrategy {
 			ClientServices.getInstance().getClientNode().changeState(ClientState.SEARCH);
 
 			algorithm.generateSolution();
-
+			
+			List<TestChromosome> populationList = algorithm.getPopulationList();
+			int expProb = getExceptionTimes(populationList);
+			
+			BufferedWriter writer = null;
+			try {
+				writer = new BufferedWriter(new FileWriter("D:\\ziheng\\SF100-clean-windows\\" + Properties.TARGET_METHOD + + new Random().nextInt() + ".txt"));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				writer.append(expProb + " ");
+				writer.append(populationList.size() + " ");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				writer.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 			testSuite = (TestSuiteChromosome) algorithm.getBestIndividual();
 			if (testSuite.getTestChromosomes().isEmpty()) {
 				LoggingUtils.getEvoLogger().warn(ClientProcess.getPrettyPrintIdentifier() + "Could not generate any test case");
@@ -161,6 +194,24 @@ public class MOSuiteStrategy extends TestGenerationStrategy {
 		testSuite.setTimeUsed(timeUsed);
 		
 		return testSuite;
+	}
+	
+	public int getExceptionTimes(List<TestChromosome> populationList) {
+		int exceptionSize = 0;
+		for (TestChromosome tc : (List<TestChromosome>) populationList) {
+			TestCase test = tc.getTestCase();
+			int targetMethodPosition = TestGenerationUtil.getTargetMethodPosition(test, test.size()-1);
+			if (targetMethodPosition != -1) {
+				if (tc.getLastExecutionResult().getFirstPositionOfThrownException() != null) {
+					Integer exceptionPos = tc.getLastExecutionResult().getFirstPositionOfThrownException();
+					if (exceptionPos <= targetMethodPosition) {
+						exceptionSize ++;
+					}
+				}
+			}
+
+		}
+		return exceptionSize;
 	}
 	
 }
