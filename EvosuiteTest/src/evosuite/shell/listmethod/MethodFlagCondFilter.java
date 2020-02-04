@@ -2,6 +2,7 @@ package evosuite.shell.listmethod;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +24,7 @@ import org.evosuite.utils.CollectionUtil;
 import org.evosuite.utils.CommonUtility;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -31,6 +33,7 @@ import org.objectweb.asm.tree.analysis.SourceValue;
 import org.objectweb.asm.tree.analysis.Value;
 import org.slf4j.Logger;
 
+import evosuite.shell.EvosuiteForMethod;
 import evosuite.shell.utils.LoggerUtils;
 import evosuite.shell.utils.OpcodeUtils;
 
@@ -40,15 +43,33 @@ import evosuite.shell.utils.OpcodeUtils;
  * 
  */
 public class MethodFlagCondFilter implements IMethodFilter {
+	int totalMethods = 0;
+	int ipfMethods = 0;
+	int noPrimitiveParameter = 0;
+	int interfaceOrAbstractParameter = 0;
+	int ipfNoPrimitiveParameter = 0;
+	int ipfInterfaceOrAbstractParameter = 0;
+	int ipfCannotInstrument = 0;
+	int targetMethods = 0;
+
 	private static Logger log = LoggerUtils.getLogger(MethodFlagCondFilter.class);
-	
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public List<String> listTestableMethods(Class<?> targetClass, ClassLoader classLoader) throws IOException {
 		InputStream is = ResourceList.getInstance(TestGenerationContext.getInstance().getClassLoaderForSUT())
 				.getClassAsStream(targetClass.getName());
 		List<String> validMethods = new ArrayList<String>();
+		List<String> filteredMethods = new ArrayList<>();
+		StringBuilder headerSb = new StringBuilder();
+		headerSb.append("#------------------------------------------------------------------------\n")
+				.append("#Project=").append(EvosuiteForMethod.projectName).append("  -   ")
+				.append(EvosuiteForMethod.projectId).append("\n")
+				.append("#------------------------------------------------------------------------\n");
+		log.info(headerSb.toString());
+
 		try {
+
 			ClassReader reader = new ClassReader(is);
 			ClassNode cn = new ClassNode();
 			reader.accept(cn, ClassReader.SKIP_FRAMES);
@@ -58,30 +79,77 @@ public class MethodFlagCondFilter implements IMethodFilter {
 				return new ArrayList<String>();
 			}
 			for (MethodNode m : l) {
-				/* methodName should be the same as declared in evosuite: String methodName = method.getName() + Type.getMethodDescriptor(method); */
+				/*
+				 * methodName should be the same as declared in evosuite: String methodName =
+				 * method.getName() + Type.getMethodDescriptor(method);
+				 */
 				String methodName = CommonUtility.getMethodName(m);
-	
+
 				if ((m.access & Opcodes.ACC_PUBLIC) == Opcodes.ACC_PUBLIC
 						|| (m.access & Opcodes.ACC_PROTECTED) == Opcodes.ACC_PROTECTED
 						|| (m.access & Opcodes.ACC_PRIVATE) == 0 /* default */ ) {
+
+					if (methodName.contains("<init>")) {
+						continue;
+					}
 					
 					try {
-						if (checkMethod(classLoader, targetClass.getName(), methodName, m, cn)) {
-							validMethods.add(methodName);
+						String className = targetClass.getName();
+						ActualControlFlowGraph cfg = GraphPool.getInstance(classLoader).getActualCFG(className,
+								methodName);
+						if (cfg == null) {
+							BytecodeAnalyzer bytecodeAnalyzer = new BytecodeAnalyzer();
+							bytecodeAnalyzer.analyze(classLoader, className, methodName, m);
+							bytecodeAnalyzer.retrieveCFGGenerator().registerCFGs();
+							cfg = GraphPool.getInstance(classLoader).getActualCFG(className, methodName);
 						}
+
+						if (CollectionUtil.isNullOrEmpty(cfg.getBranches())) {
+							continue;
+						}
+						
+						totalMethods++;
+	
+						if (filterMethod(classLoader, targetClass.getName(), methodName, m, cn)) {
+							filteredMethods.add(methodName);
+
+								if (checkMethod(classLoader, targetClass.getName(), methodName, m, cn)) {
+									validMethods.add(methodName);
+								}
+							}
 					} catch (Exception e) {
 						log.info("error!!", e);
 					}
-				} 
+				}
 			}
 		} finally {
-			is.close(); 
+			is.close();
+			ipfMethods += filteredMethods.size();
+			targetMethods += validMethods.size();
 		}
 		return validMethods;
 	}
-	
+
+	public int getTotal() {
+		return totalMethods;
+	}
+
+	public int getFiltered() {
+		return ipfMethods;
+	}
+
+	public int getTarget() {
+		return targetMethods;
+	}
+
+	protected boolean filterMethod(ClassLoader classLoader, String name, String methodName, MethodNode m, ClassNode cn)
+			throws AnalyzerException, IOException, ClassNotFoundException {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 	/**
-	 * @throws ClassNotFoundException 
+	 * @throws ClassNotFoundException
 	 * 
 	 */
 	protected boolean checkMethod(ClassLoader classLoader, String className, String methodName, MethodNode node,

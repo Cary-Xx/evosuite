@@ -40,6 +40,7 @@ public class ListMethods {
 			.append("#Project=").append(EvosuiteForMethod.projectName).append("  -   ").append(EvosuiteForMethod.projectId).append("\n")
 			.append("#------------------------------------------------------------------------\n");
 		log.info(headerSb.toString());
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", headerSb.toString(), true);
 		FileUtils.writeFile(targetMethodFilePath, headerSb.toString(), true);
 		if (!ArrayUtil.contains(Properties.CRITERION, Criterion.DEFUSE)) {
 			Properties.CRITERION = ArrayUtils.addAll(Properties.CRITERION, Criterion.DEFUSE);
@@ -53,6 +54,17 @@ public class ListMethods {
 		
 		IMethodFilter methodFilter = mFilterOpt.getCorrespondingFilter();
 		int total = 0;
+		
+        ((MethodFlagCondFilter) methodFilter).totalMethods = 0;
+        ((MethodFlagCondFilter) methodFilter).ipfMethods = 0;
+        ((MethodFlagCondFilter) methodFilter).noPrimitiveParameter = 0;
+        ((MethodFlagCondFilter) methodFilter).interfaceOrAbstractParameter = 0;
+        ((MethodFlagCondFilter) methodFilter).ipfNoPrimitiveParameter = 0;
+        ((MethodFlagCondFilter) methodFilter).ipfInterfaceOrAbstractParameter = 0;
+        ((MethodFlagCondFilter) methodFilter).ipfCannotInstrument = 0;
+        
+        ((MethodFlagCondFilter) methodFilter).targetMethods = 0;
+
 		StringBuilder tMethodSb = new StringBuilder(headerSb.toString());
 		List<String> testableClasses = new ArrayList<String>();
 		for (String className : targetClasses) {
@@ -84,6 +96,20 @@ public class ListMethods {
 				log.error("Error", t);
 			}
 		}
+		
+        int totalMethods = ((MethodFlagCondFilter) methodFilter).getTotal();
+        int ipfMethods = ((MethodFlagCondFilter) methodFilter).getFiltered();
+        int targetMethods = ((MethodFlagCondFilter) methodFilter).getTarget();
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", "TotalMethods: " + totalMethods + "\n", true);
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", "IPFmethods : " + ipfMethods + "\n", true);
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", "targetNoPrimitiveParameter : " + ((MethodFlagCondFilter) methodFilter).noPrimitiveParameter + "\n", true);
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", "targetHasInterfaceOrAbstractParameter : " + ((MethodFlagCondFilter) methodFilter).interfaceOrAbstractParameter + "\n", true);
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", "ipfNoPrimitiveParameter : " + ((MethodFlagCondFilter) methodFilter).ipfNoPrimitiveParameter + "\n", true);
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", "ipfHasInterfaceOrAbstractParameter : " + ((MethodFlagCondFilter) methodFilter).ipfInterfaceOrAbstractParameter + "\n", true);
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", "ipfCannotInstrument : " + ((MethodFlagCondFilter) methodFilter).ipfCannotInstrument + "\n", true);
+        FileUtils.writeFile("D:\\ziheng\\SF100-clean-windows\\stats.txt", "TargetMethods : " + targetMethods + "\n", true);
+        
+
 		/* log target classes */
 		TargetMethodIOUtils.writeTargetClassOrMethodTxt(EvosuiteForMethod.projectName, EvosuiteForMethod.projectId, 
 				testableClasses, targetClassFilePath);
