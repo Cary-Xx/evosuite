@@ -1,5 +1,7 @@
 language: 
 	java
+env:
+  - JDK=openjdk8
 jdk: 
 	- openjdk8
 dist: 
