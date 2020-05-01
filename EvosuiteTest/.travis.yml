@@ -1,8 +1,6 @@
 language: 
 	java
-env:
-  - JDK=openjdk8
+dist:
+	trusty
 jdk: 
 	- openjdk8
-dist: 
-	trusty
