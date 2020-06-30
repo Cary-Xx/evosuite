@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.evosuite.graphs.cfg.BytecodeInstruction;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 
@@ -36,20 +35,21 @@ public class DepVariable {
 	public static int OPERAND_NUM_LIMIT = 30;
 	
 	/**
-	 * this variable take a child in the ith operand (assume that no instruction takes over 30 operands)
+	 * storing children
+	 * given a child, this variable is its i-th operand (assume that no instruction takes over OPERAND_NUM_LIMIT operands).
 	 */
 	@SuppressWarnings("unchecked")
 	private List<DepVariable>[] relations = new ArrayList[OPERAND_NUM_LIMIT];
 	
 	/**
-	 * this variable is used for the ith position of the parent (assume that no instruction takes over 30 operands).
+	 * storing parents
+	 * given a parent, this variable takes it its i-th operand (assume that no instruction takes over OPERAND_NUM_LIMIT operands).
 	 */
 	@SuppressWarnings("unchecked")
 	private List<DepVariable>[] reverseRelations = new ArrayList[OPERAND_NUM_LIMIT];
 	
-	public DepVariable(String className, String varName, BytecodeInstruction insn) {
+	public DepVariable(String className, BytecodeInstruction insn) {
 		this.className = className;
-		this.varName = varName;
 		this.setInstruction(insn);
 		this.setType();
 	}
@@ -186,7 +186,7 @@ public class DepVariable {
 		
 		this.getRelations()[position] = list;
 		
-		if(this.getInstruction().getInstructionId()==20 && outputVar.getInstruction().getInstructionId()==25) {
+		if(this.getInstruction().getInstructionId()==14 && this.varName.equals("checkRules(Lstate/Action;Lstate/GameState;)Z_LV_1")) {
 			System.currentTimeMillis();
 		}
 		
@@ -382,7 +382,12 @@ public class DepVariable {
 		}
 		
 		if(roots.isEmpty()) {
-			roots.put(this, new ArrayList<>());
+			ArrayList<ConstructionPath> list = new ArrayList<>();
+			ArrayList<DepVariable> partialPath = new ArrayList<>();
+			partialPath.add(this);
+			ConstructionPath p = new ConstructionPath(partialPath, new ArrayList<>());
+			list.add(p);
+			roots.put(this, list);
 		}
 		
 		return roots;
@@ -390,9 +395,11 @@ public class DepVariable {
 
 	public void setName(String name) {
 		this.varName = name;
-		
 	}
 
+	public String getName(){
+		return this.varName;
+	}
 
 	public int getParamOrder() {
 		if(varName.contains("LV_")) {
@@ -482,6 +489,10 @@ public class DepVariable {
 	public List<DepVariable>[] getRelations() {
 		return relations;
 	}
+	
+	public List<DepVariable>[] getReverseRelations() {
+		return reverseRelations;
+	}
 
 	public int findRelationPosition(DepVariable var) {
 		for(int i=0; i<relations.length; i++) {
@@ -496,6 +507,28 @@ public class DepVariable {
 		}
 		
 		return -1;
+	}
+
+	/**
+	 * check whether this variable will be used as an index-th operand for a given node childVar.
+	 * @param childVar
+	 * @param index
+	 * @return
+	 */
+	public boolean isSupportOperandFor(DepVariable childVar, int index) {
+		List<DepVariable> list = this.relations[index];
+		
+		if(list == null){
+			return false;
+		}
+		
+		for(DepVariable v: list){
+			if(v.equals(childVar)){
+				return true;
+			}
+		}
+		
+		return false;
 	}
 
 }

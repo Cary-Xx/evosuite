@@ -31,8 +31,8 @@ import org.objectweb.asm.tree.analysis.SourceValue;
 import org.objectweb.asm.tree.analysis.Value;
 
 public class FieldUseAnalyzer {
-	private Map<BytecodeInstruction, DepVariable> instructionPool = new HashMap<BytecodeInstruction, DepVariable>();
-	
+	private static Map<DepVariable, DepVariable> variablePool = new HashMap<>();
+	private static Map<BytecodeInstruction, DepVariable> insPool = new HashMap<>();
 	
 	private String getRuleBasedSubclass(String className) {
 		if(className.equals("java.util.List")) {
@@ -117,13 +117,23 @@ public class FieldUseAnalyzer {
 	 */
 	public DepVariable parseVariable(BytecodeInstruction defIns) {
 		String className = defIns.getClassName();
-		String varName = "$unknown";
-		
-		DepVariable var = instructionPool.get(defIns); 
+//		DepVariable var0 = new DepVariable(className, defIns);
+//		DepVariable var = variablePool.get(var0); 
+		DepVariable var = insPool.get(defIns);
 		if(var == null) {
-			var = new DepVariable(className, varName, defIns);
+			var = new DepVariable(className, defIns);
 			
-			instructionPool.put(defIns, var);
+			if(var.getName().equals("checkRules(Lstate/Action;Lstate/GameState;)Z_LV_1")){
+				System.currentTimeMillis();
+			}
+			
+//			variablePool.put(var, var);
+			insPool.put(defIns, var);
+		}
+		else{
+			if(var.getName().equals("checkRules(Lstate/Action;Lstate/GameState;)Z_LV_1")){
+				System.currentTimeMillis();
+			}
 		}
 		
 		return var;
@@ -163,7 +173,9 @@ public class FieldUseAnalyzer {
 		 */
 		for(AbstractInsnNode insNode: srcValue.insns) {
 			BytecodeInstruction defIns = DefUseAnalyzer.convert2BytecodeInstruction(cfg, node, insNode);
-			searchDefDependentVariables(defIns, cfg, allLeafDepVars, visitedIns, callGraphDepth);
+			if (defIns != null) {
+				searchDefDependentVariables(defIns, cfg, allLeafDepVars, visitedIns, callGraphDepth);
+			}
 		}
 	}
 	
@@ -284,41 +296,43 @@ public class FieldUseAnalyzer {
 		Set<DepVariable> relatedVariables = relatedVariableMap.get(className);
 		
 		for(DepVariable var: relatedVariables) {
+			System.currentTimeMillis();
 			for(DepVariable rootVar: var.getRootVars().keySet()) {
-				if(rootVar.getInstruction().getClassName().
+				if(!(rootVar.getInstruction().getClassName().
 						equals(defIns.getCalledCFG().getClassName()) && 
-						rootVar.getInstruction().getMethodName().equals(defIns.getCalledCFG().getMethodName())) {
-					if(var.getType() == DepVariable.STATIC_FIELD) {
-						allLeafDepVars.add(var);					
-					}
-					else {
-//						ConstructionPath path0 = rootVar.findPath(var);
-//						System.currentTimeMillis();
-						ArrayList<ConstructionPath> paths = var.getRootVars().get(rootVar);
-						ConstructionPath path = paths.get(0);
+						rootVar.getInstruction().getMethodName().equals(defIns.getCalledCFG().getMethodName()))) {
+					continue;
+				}
+				
+				if(var.getType() == DepVariable.STATIC_FIELD) {
+					allLeafDepVars.add(var);					
+				}
+				else {
+//					ConstructionPath path0 = rootVar.findPath(var);
+					ArrayList<ConstructionPath> paths = var.getRootVars().get(rootVar);
+					ConstructionPath path = paths.get(0);
+					
+					if(path != null) {
+						if(path.getPath().size() < 2) {
+							System.currentTimeMillis();
+						}
 						
-						if(path != null) {
-							if(path.getPath().size() < 2) {
-								System.currentTimeMillis();
-							}
+						DepVariable secondVar = path.getPath().get(path.size()-2);
+						if(rootVar.getType() == DepVariable.PARAMETER) {
+							int index = rootVar.getParamOrder() - 1;
+							List<DepVariable> params = inputVarArray[index];
 							
-							DepVariable secondVar = path.getPath().get(path.size()-2);
-							if(rootVar.getType() == DepVariable.PARAMETER) {
-								int index = rootVar.getParamOrder() - 1;
-								List<DepVariable> params = inputVarArray[index];
-								
-								for(DepVariable param: params) {
-									param.buildRelation(secondVar, path.getPosition().get(path.size()-2));
-								}
+							for(DepVariable param: params) {
+								param.buildRelation(secondVar, path.getPosition().get(path.size()-2));
 							}
-							else if(rootVar.getType() == DepVariable.THIS) {
-								List<DepVariable> objectVars = inputVarArray[0];
-								for(DepVariable objectVar: objectVars) {
-									if(path.getPosition().size() < path.size()-2) {
-										System.currentTimeMillis();
-									}
-									objectVar.buildRelation(secondVar, path.getPosition().get(path.size()-2));									
+						}
+						else if(rootVar.getType() == DepVariable.THIS) {
+							List<DepVariable> objectVars = inputVarArray[0];
+							for(DepVariable objectVar: objectVars) {
+								if(path.getPosition().size() < path.size()-2) {
+									System.currentTimeMillis();
 								}
+								objectVar.buildRelation(secondVar, path.getPosition().get(path.size()-2));									
 							}
 						}
 					}

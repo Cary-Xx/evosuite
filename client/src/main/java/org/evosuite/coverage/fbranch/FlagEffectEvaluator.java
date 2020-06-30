@@ -274,7 +274,14 @@ public class FlagEffectEvaluator {
 			return stringDef;
 		}
 		else if(stringDef.isLocalVariableUse()) {
-			List<BytecodeInstruction> defs = DefUseAnalyzer.getDefFromUse(stringDef);
+			List<BytecodeInstruction> defs = null;
+			try{
+				defs = DefUseAnalyzer.getDefFromUse(stringDef);				
+			}
+			catch(Exception e){
+				
+			}
+			
 			if(defs != null && defs.size() > 0) {
 				return defs.get(0);				
 			}
@@ -318,7 +325,7 @@ public class FlagEffectEvaluator {
 					flag =  checkFlagEffect(methodCall);
 				}			
 				
-				if(flag.hasFlagEffect) {
+				if(flag != null && flag.hasFlagEffect) {
 					break;
 				}
 			}
@@ -382,31 +389,46 @@ public class FlagEffectEvaluator {
 			return new FlagEffectResult(defIns, false, null);
 		}
 		
-		for(BytecodeInstruction exit: calledGraph.determineExitPoints()) {
-			List<BytecodeInstruction> returnDefs = exit.getSourceOfStackInstructionList(0);
-			if(returnDefs.size()>1) {
-				System.currentTimeMillis();
-			}
-			BytecodeInstruction returnDef = returnDefs.get(0);
-			
-			if(returnDef.isConstant() || returnDef.isLoadConstant()) {
-				
-				Call callInfo = new Call(defIns.getClassName(), defIns.getMethodName(), 
-						defIns.getInstructionId());
-				callInfo.setLineNumber(defIns.getLineNumber());
-				FlagEffectResult result = new FlagEffectResult(defIns, true, callInfo);
-				return result;
-			}
-			else if (returnDef.isMethodCall()) {
-				if(!parsedDefInsList.contains(returnDef)){
-					parsedDefInsList.add(returnDef);
-					return checkFlagEffect(returnDef, parsedDefInsList);
-				}
-			}
+		String mName = defIns.getCalledMethod();
+		String returnType = mName.substring(mName.indexOf(")")+1);
+		if(returnType.equals("Z")){
+			Call callInfo = new Call(defIns.getClassName(), defIns.getMethodName(), 
+					defIns.getInstructionId());
+			callInfo.setLineNumber(defIns.getLineNumber());
+			FlagEffectResult result = new FlagEffectResult(defIns, true, callInfo);
+			return result;
+		}
+		else{
+			return new FlagEffectResult(defIns, false, null);
 		}
 		
-		
-		return new FlagEffectResult(defIns, false, null);
+//		System.currentTimeMillis();
+//		
+//		for(BytecodeInstruction exit: calledGraph.determineExitPoints()) {
+//			List<BytecodeInstruction> returnDefs = exit.getSourceOfStackInstructionList(0);
+//			if(returnDefs.size()>1) {
+//				System.currentTimeMillis();
+//			}
+//			BytecodeInstruction returnDef = returnDefs.get(0);
+//			
+//			if(returnDef.isConstant() || returnDef.isLoadConstant()) {
+//				
+//				Call callInfo = new Call(defIns.getClassName(), defIns.getMethodName(), 
+//						defIns.getInstructionId());
+//				callInfo.setLineNumber(defIns.getLineNumber());
+//				FlagEffectResult result = new FlagEffectResult(defIns, true, callInfo);
+//				return result;
+//			}
+//			else if (returnDef.isMethodCall()) {
+//				if(!parsedDefInsList.contains(returnDef)){
+//					parsedDefInsList.add(returnDef);
+//					return checkFlagEffect(returnDef, parsedDefInsList);
+//				}
+//			}
+//		}
+//		
+//		
+//		return new FlagEffectResult(defIns, false, null);
 	}
 
 	public static int getOperands(BytecodeInstruction ins) {
